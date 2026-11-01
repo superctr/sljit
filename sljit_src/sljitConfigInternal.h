@@ -295,7 +295,8 @@ extern "C" {
 #ifndef SLJIT_CACHE_FLUSH
 
 #if (defined SLJIT_CONFIG_X86 && SLJIT_CONFIG_X86) \
-	|| (defined SLJIT_CONFIG_S390X && SLJIT_CONFIG_S390X)
+	|| (defined SLJIT_CONFIG_S390X && SLJIT_CONFIG_S390X) \
+	|| (defined SLJIT_CONFIG_WASM && SLJIT_CONFIG_WASM)
 
 /* Not required to implement on archs with unified caches. */
 #define SLJIT_CACHE_FLUSH(from, to)
@@ -366,6 +367,13 @@ typedef signed int sljit_s32;
 #define SLJIT_WORD_SHIFT 0
 typedef unsigned int sljit_uw;
 typedef int sljit_sw;
+#elif (defined SLJIT_CONFIG_WASM_32 && SLJIT_CONFIG_WASM_32)
+/* A 64 bit machine word over a 32 bit address space. */
+#define SLJIT_64BIT_ARCHITECTURE 1
+#define SLJIT_WORD_SHIFT 3
+#define SLJIT_POINTER_SHIFT 2
+typedef unsigned long long sljit_uw;
+typedef long long sljit_sw;
 #elif !(defined SLJIT_CONFIG_X86_64 && SLJIT_CONFIG_X86_64) \
 	&& !(defined SLJIT_CONFIG_ARM_64 && SLJIT_CONFIG_ARM_64) \
 	&& !(defined SLJIT_CONFIG_PPC_64 && SLJIT_CONFIG_PPC_64) \
@@ -404,7 +412,9 @@ typedef float sljit_f32;
 typedef double sljit_f64;
 
 /* Shift for pointer sized data. */
+#ifndef SLJIT_POINTER_SHIFT
 #define SLJIT_POINTER_SHIFT SLJIT_WORD_SHIFT
+#endif
 
 /* Shift for double precision sized data. */
 #define SLJIT_F32_SHIFT 2
@@ -448,6 +458,10 @@ typedef double sljit_f64;
 #define SLJIT_CONV_MAX_FLOAT SLJIT_CONV_RESULT_MAX_INT
 #define SLJIT_CONV_MIN_FLOAT SLJIT_CONV_RESULT_MIN_INT
 #define SLJIT_CONV_NAN_FLOAT SLJIT_CONV_RESULT_ZERO
+#elif (defined SLJIT_CONFIG_WASM && SLJIT_CONFIG_WASM)
+#define SLJIT_CONV_MAX_FLOAT SLJIT_CONV_RESULT_MAX_INT
+#define SLJIT_CONV_MIN_FLOAT SLJIT_CONV_RESULT_MIN_INT
+#define SLJIT_CONV_NAN_FLOAT SLJIT_CONV_RESULT_ZERO
 #else
 #error "Result for float to integer conversion is not defined"
 #endif
@@ -456,7 +470,7 @@ typedef double sljit_f64;
 
 /* Defining long constants. */
 #if (defined SLJIT_64BIT_ARCHITECTURE && SLJIT_64BIT_ARCHITECTURE)
-#ifdef _WIN64
+#if defined(_WIN64) || (defined SLJIT_CONFIG_WASM && SLJIT_CONFIG_WASM)
 #define SLJIT_W(w)	(w##ll)
 #else /* !windows */
 #define SLJIT_W(w)	(w##l)
@@ -489,7 +503,8 @@ typedef double sljit_f64;
 	|| (defined SLJIT_CONFIG_PPC && SLJIT_CONFIG_PPC) \
 	|| (defined SLJIT_CONFIG_RISCV && SLJIT_CONFIG_RISCV) \
 	|| (defined SLJIT_CONFIG_S390X && SLJIT_CONFIG_S390X) \
-	|| (defined SLJIT_CONFIG_LOONGARCH && SLJIT_CONFIG_LOONGARCH)
+	|| (defined SLJIT_CONFIG_LOONGARCH && SLJIT_CONFIG_LOONGARCH) \
+	|| (defined SLJIT_CONFIG_WASM && SLJIT_CONFIG_WASM)
 #define SLJIT_UNALIGNED 1
 #endif
 
@@ -540,6 +555,18 @@ determine the next executed instruction after return. */
 /***************************************************/
 /* Functions of the built-in executable allocator. */
 /***************************************************/
+
+#if (defined SLJIT_CONFIG_WASM && SLJIT_CONFIG_WASM)
+/* Code is a WebAssembly module, placed in the function table. */
+#undef SLJIT_EXECUTABLE_ALLOCATOR
+#undef SLJIT_MALLOC_EXEC
+#undef SLJIT_FREE_EXEC
+SLJIT_API_FUNC_ATTRIBUTE void sljit_wasm_free_code(void *code);
+#define SLJIT_BUILTIN_MALLOC_EXEC(size, exec_allocator_data) NULL
+#define SLJIT_BUILTIN_FREE_EXEC(ptr, exec_allocator_data) sljit_wasm_free_code(ptr)
+#define SLJIT_MALLOC_EXEC(size, exec_allocator_data) NULL
+#define SLJIT_FREE_EXEC(ptr, exec_allocator_data) sljit_wasm_free_code(ptr)
+#endif /* SLJIT_CONFIG_WASM */
 
 #if (defined SLJIT_EXECUTABLE_ALLOCATOR && SLJIT_EXECUTABLE_ALLOCATOR)
 SLJIT_API_FUNC_ATTRIBUTE void* sljit_malloc_exec(sljit_uw size);
@@ -714,6 +741,24 @@ SLJIT_API_FUNC_ATTRIBUTE sljit_sw sljit_exec_offset(void *code);
 #define SLJIT_MASKED_SHIFT32 1
 #define SLJIT_UPPER_BITS_IGNORED 1
 #define SLJIT_UPPER_BITS_SIGN_EXTENDED 1
+#define SLJIT_SHARED_COMPARISON_FLAGS 1
+
+#elif (defined SLJIT_CONFIG_WASM && SLJIT_CONFIG_WASM)
+
+#define SLJIT_NUMBER_OF_REGISTERS 16
+#define SLJIT_NUMBER_OF_SAVED_REGISTERS 10
+#define SLJIT_NUMBER_OF_TEMPORARY_REGISTERS 2
+#define SLJIT_NUMBER_OF_FLOAT_REGISTERS 8
+#define SLJIT_NUMBER_OF_SAVED_FLOAT_REGISTERS 0
+#define SLJIT_NUMBER_OF_TEMPORARY_FLOAT_REGISTERS 1
+#define SLJIT_TMP_DEST_REG SLJIT_TMP_R0
+#define SLJIT_TMP_OPT_REG SLJIT_TMP_R1
+#define SLJIT_TMP_DEST_FREG SLJIT_TMP_FR0
+#define SLJIT_LOCALS_OFFSET_BASE 0
+#define SLJIT_MASKED_SHIFT 1
+#define SLJIT_MASKED_SHIFT32 1
+#define SLJIT_UPPER_BITS_IGNORED 1
+#define SLJIT_UPPER_BITS_ZERO_EXTENDED 1
 #define SLJIT_SHARED_COMPARISON_FLAGS 1
 
 #elif (defined SLJIT_CONFIG_S390X && SLJIT_CONFIG_S390X)

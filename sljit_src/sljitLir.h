@@ -624,6 +624,13 @@ struct sljit_compiler {
 	sljit_sw cache_argw;
 #endif /* SLJIT_CONFIG_LOONGARCH */
 
+#if (defined SLJIT_CONFIG_WASM && SLJIT_CONFIG_WASM)
+	/* Argument types given to sljit_emit_enter. */
+	sljit_s32 wasm_args;
+	/* The last operation which set the status flags. */
+	sljit_s32 wasm_flags;
+#endif /* SLJIT_CONFIG_WASM */
+
 #if (defined SLJIT_VERBOSE && SLJIT_VERBOSE)
 	FILE* verbose;
 #endif /* SLJIT_VERBOSE */

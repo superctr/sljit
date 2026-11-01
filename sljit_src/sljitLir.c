@@ -1171,7 +1171,7 @@ SLJIT_API_FUNC_ATTRIBUTE void sljit_compiler_verbose(struct sljit_compiler *comp
 }
 
 #if (defined SLJIT_64BIT_ARCHITECTURE && SLJIT_64BIT_ARCHITECTURE)
-#ifdef _WIN64
+#if defined(_WIN64) || (defined SLJIT_CONFIG_WASM && SLJIT_CONFIG_WASM)
 #ifdef __GNUC__
 #	define SLJIT_PRINT_D	"ll"
 #else /* !__GNUC__ */
@@ -3497,6 +3497,8 @@ static void sljit_reset_read_only_buffers(struct sljit_read_only_buffer *buffers
 #	include "sljitNativeLOONGARCH_64.c"
 #elif (defined SLJIT_CONFIG_ALPHA && SLJIT_CONFIG_ALPHA)
 #	include "sljitNativeALPHA_64.c"
+#elif (defined SLJIT_CONFIG_WASM && SLJIT_CONFIG_WASM)
+#	include "sljitNativeWASM_32.c"
 #endif /* SLJIT_CONFIG_X86 */
 
 #include "sljitSerialize.c"
